@@ -145,15 +145,22 @@
       </table>
     </div>
   </section>
-  @if (selected(); as row) {
-    <section class="audit-panel" aria-labelledby="audit-heading">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">TRANSACTION HISTORY</p>
-          <h2 id="audit-heading">{{ row.sourceSystem }} / {{ row.transactionId }}</h2>
-        </div>
-        <button (click)="selected.set(null)">Close history</button>
+  <dialog
+    #auditDialog
+    class="audit-modal"
+    aria-labelledby="audit-heading"
+    (cancel)="$event.preventDefault(); closeAudit()"
+    (close)="selected.set(null)"
+    (click)="dismissAudit($event)"
+  >
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">TRANSACTION HISTORY</p>
+        <h2 id="audit-heading">{{ selected()?.sourceSystem }} / {{ selected()?.transactionId }}</h2>
       </div>
+      <button autofocus (click)="closeAudit()">Close history</button>
+    </div>
+    @if (selected(); as row) {
       <p>
         {{ row.productName }} · Revision {{ row.revisionNumber }} ·
         {{ row.cardNumber ? 'Card ending ' + row.cardNumber : 'Other payment method' }}
@@ -193,8 +200,8 @@
           </tbody>
         </table>
       </div>
-    </section>
-  }
+    }
+  </dialog>
   <section class="run-panel" aria-labelledby="runs-heading">
     <div class="section-heading">
       <h2 id="runs-heading">Recent imports</h2>

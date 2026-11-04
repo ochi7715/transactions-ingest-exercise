@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, ViewChild, computed, inject, signal } from '@angular/core';
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -12,6 +12,9 @@ import { TransactionsApi, Transaction, ImportRun, AuditChange } from './transact
   styleUrl: './app.css',
 })
 export class App {
+  @ViewChild('auditDialog', { static: true })
+  private auditDialog!: ElementRef<HTMLDialogElement>;
+
   private readonly api = inject(TransactionsApi);
   readonly transactions = signal<Transaction[]>([]);
   readonly runs = signal<ImportRun[]>([]);
@@ -107,7 +110,7 @@ export class App {
           `${run.status}: ${count('inserted')} added, ${count('updated')} updated, ${count('revoked')} revoked, ${count('restored')} restored.`,
         );
         this.importing.set(false);
-        this.selected.set(null);
+        this.closeAudit();
         this.refresh();
       },
       error: (error) => {
@@ -122,6 +125,7 @@ export class App {
     this.audit.set([]);
     this.auditError.set('');
     this.auditLoading.set(true);
+    this.auditDialog.nativeElement.showModal();
     this.api.audit(transaction.id).subscribe({
       next: (changes) => {
         if (this.selected()?.id !== transaction.id) return;
@@ -134,6 +138,25 @@ export class App {
         this.auditLoading.set(false);
       },
     });
+  }
+
+  closeAudit(): void {
+    this.auditDialog.nativeElement.close();
+    this.selected.set(null);
+  }
+
+  dismissAudit(event: MouseEvent): void {
+    const dialog = this.auditDialog.nativeElement;
+    if (event.target !== dialog) return;
+    const bounds = dialog.getBoundingClientRect();
+    if (
+      event.clientX < bounds.left ||
+      event.clientX > bounds.right ||
+      event.clientY < bounds.top ||
+      event.clientY > bounds.bottom
+    ) {
+      this.closeAudit();
+    }
   }
 
   private describe(error: HttpErrorResponse): string {

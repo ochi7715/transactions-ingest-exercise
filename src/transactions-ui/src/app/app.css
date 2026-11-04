@@ -137,7 +137,6 @@ button:disabled {
   background: #183e29;
 }
 .records,
-.audit-panel,
 .run-panel {
   border: 1px solid #dce3dd;
   border-radius: 10px;
@@ -254,7 +253,23 @@ tbody tr:hover {
   color: #245c36;
   background: #e7f2e7;
 }
-.audit-panel > p {
+.audit-modal {
+  width: min(1040px, calc(100% - 32px));
+  max-width: none;
+  max-height: calc(100dvh - 48px);
+  margin: auto;
+  padding: 0;
+  border: 1px solid #dce3dd;
+  border-radius: 12px;
+  background: #fff;
+  color: inherit;
+  box-shadow: 0 20px 70px #162b2440;
+  overflow: auto;
+}
+.audit-modal::backdrop {
+  background: #162b2480;
+}
+.audit-modal > p {
   padding: 0 22px;
   font-size: 13px;
   color: #657368;

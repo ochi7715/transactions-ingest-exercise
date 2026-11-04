@@ -34,6 +34,8 @@ From the project folder, after building:
 
 Start with a fresh database. Select a scenario and click **Import now**.
 
+Click **View** to open a transaction's history in a modal.
+
 | Scenario | Result |
 |---|---|
 | baseline | Adds 9 transactions. |
