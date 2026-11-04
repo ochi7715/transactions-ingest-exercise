@@ -1,0 +1,247 @@
+<main>
+  <header>
+    <div>
+      <p class="eyebrow">PAYMENTS OPERATIONS</p>
+      <h1>Transactions</h1>
+      <p class="intro">One view of Store Uptown, Store Downtown, and Online.</p>
+    </div>
+    <span class="demo-label">Demo workspace</span>
+  </header>
+  <section class="metrics" aria-label="Transaction summary">
+    <div>
+      <span>Total transactions</span><strong>{{ transactions().length }}</strong>
+    </div>
+    <div>
+      <span>Active</span><strong>{{ active() }}</strong>
+    </div>
+    <div>
+      <span>Revoked</span><strong>{{ revoked() }}</strong>
+    </div>
+    <div>
+      <span>Active amount</span><strong>{{ activeTotal() | currency: 'USD' }}</strong>
+    </div>
+  </section>
+  <section class="import-panel" aria-labelledby="import-heading">
+    <div>
+      <h2 id="import-heading">Import transactions</h2>
+      <p>Select a source snapshot scenario, then import it. Start with Baseline.</p>
+    </div>
+    <div class="import-actions">
+      <label
+        >Snapshot scenario
+        <select [(ngModel)]="scenario" [disabled]="importing() || loading()">
+          @for (option of scenarios(); track option) {
+            <option [value]="option">{{ option }}</option>
+          }
+        </select>
+      </label>
+      <button
+        class="primary"
+        (click)="import()"
+        [disabled]="importing() || loading() || !scenarios().length"
+      >
+        {{ importing() ? 'Importing…' : 'Import now' }}
+      </button>
+    </div>
+    <p class="scenario-description">{{ descriptions[scenario] }}</p>
+  </section>
+  @if (error()) {
+    <p class="error" role="alert">{{ error() }} <button (click)="refresh()">Retry</button></p>
+  }
+  @if (notice()) {
+    <p class="notice" role="status">{{ notice() }}</p>
+  }
+  <section class="records" aria-labelledby="records-heading" [attr.aria-busy]="loading()">
+    <div class="section-heading">
+      <h2 id="records-heading">
+        Transaction records <span>{{ visible().length }}</span>
+      </h2>
+      <button (click)="refresh()" [disabled]="loading() || importing()">Refresh</button>
+    </div>
+    <div class="filters">
+      <label class="search"
+        >Search<input
+          type="search"
+          placeholder="ID, product, or location"
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event)"
+      /></label>
+      <label
+        >Source<select [ngModel]="source()" (ngModelChange)="source.set($event)">
+          @for (option of sources; track option) {
+            <option>{{ option }}</option>
+          }
+        </select></label
+      >
+      <label
+        >Status<select [ngModel]="status()" (ngModelChange)="status.set($event)">
+          <option>All statuses</option>
+          <option>Active</option>
+          <option>Revoked</option>
+        </select></label
+      >
+      <label
+        >Sort by<select [ngModel]="sort()" (ngModelChange)="sort.set($event)">
+          <option value="newest">Newest first</option>
+          <option value="amount">Highest amount</option>
+          <option value="source">Source</option>
+        </select></label
+      >
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Source system</th>
+            <th>Transaction ID</th>
+            <th>Location</th>
+            <th>Product</th>
+            <th class="number">Amount</th>
+            <th>Transaction time · UTC</th>
+            <th>Status</th>
+            <th>History</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of visible(); track row.id) {
+            <tr>
+              <td class="source-name">{{ row.sourceSystem }}</td>
+              <td class="mono">{{ row.transactionId }}</td>
+              <td class="location">{{ row.locationCode }}</td>
+              <td>{{ row.productName }}</td>
+              <td class="number mono">{{ row.amount | currency: 'USD' }}</td>
+              <td>{{ row.transactionTime | date: 'MMM d, y HH:mm' : 'UTC' }}</td>
+              <td>
+                <span class="badge" [class.revoked]="row.status === 'Revoked'">{{
+                  row.status
+                }}</span>
+              </td>
+              <td>
+                <button
+                  class="text-button"
+                  (click)="showAudit(row)"
+                  [attr.aria-label]="
+                    'View history for ' + row.sourceSystem + ' ' + row.transactionId
+                  "
+                >
+                  View
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="8" class="empty">
+                {{
+                  loading()
+                    ? 'Loading transactions…'
+                    : transactions().length
+                      ? 'No transactions match these filters.'
+                      : 'No transactions yet. Run the Baseline import to get started.'
+                }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+  @if (selected(); as row) {
+    <section class="audit-panel" aria-labelledby="audit-heading">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">TRANSACTION HISTORY</p>
+          <h2 id="audit-heading">{{ row.sourceSystem }} / {{ row.transactionId }}</h2>
+        </div>
+        <button (click)="selected.set(null)">Close history</button>
+      </div>
+      <p>
+        {{ row.productName }} · Revision {{ row.revisionNumber }} ·
+        {{ row.cardNumber ? 'Card ending ' + row.cardNumber : 'Other payment method' }}
+      </p>
+      @if (auditError()) {
+        <p class="error" role="alert">{{ auditError() }}</p>
+      }
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Detected · UTC</th>
+              <th>Event</th>
+              <th>Field</th>
+              <th>Previous value</th>
+              <th>New value</th>
+              <th>Import</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (change of audit(); track change.id) {
+              <tr>
+                <td>{{ change.detectedAtUtc | date: 'MMM d, y HH:mm:ss' : 'UTC' }}</td>
+                <td>{{ change.eventType }}</td>
+                <td>{{ change.fieldName }}</td>
+                <td>{{ change.oldValue ?? '—' }}</td>
+                <td>{{ change.newValue ?? '—' }}</td>
+                <td>#{{ change.importRunId }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="6" class="empty">
+                  {{ auditLoading() ? 'Loading history…' : 'No history available.' }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+  <section class="run-panel" aria-labelledby="runs-heading">
+    <div class="section-heading">
+      <h2 id="runs-heading">Recent imports</h2>
+      <span class="muted">Latest 20 runs</span>
+    </div>
+    @for (run of runs(); track run.id) {
+      <details>
+        <summary>
+          <span class="mono">#{{ run.id }}</span
+          ><strong>{{ run.scenario }}</strong>
+          <span>{{ run.startedAtUtc | date: 'MMM d, HH:mm:ss' : 'UTC' }} UTC</span>
+          <span class="badge" [class.revoked]="run.status !== 'Succeeded'">{{ run.status }}</span>
+        </summary>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Source</th>
+                <th>Result</th>
+                <th>Added</th>
+                <th>Updated</th>
+                <th>Revoked</th>
+                <th>Restored</th>
+                <th>Unchanged</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (source of run.sources; track source.sourceSystem) {
+                <tr>
+                  <td>{{ source.sourceSystem }}</td>
+                  <td>{{ source.error || source.status }}</td>
+                  <td>{{ source.inserted }}</td>
+                  <td>{{ source.updated }}</td>
+                  <td>{{ source.revoked }}</td>
+                  <td>{{ source.restored }}</td>
+                  <td>{{ source.unchanged }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </details>
+    } @empty {
+      <p class="empty">Your import results will appear here.</p>
+    }
+  </section>
+  <footer>
+    All times are shown in UTC. Missing records are evaluated within a 24-hour window.
+  </footer>
+</main>
